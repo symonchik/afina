@@ -22,6 +22,7 @@
 #include "network/st_nonblocking/ServerImpl.h"
 
 #include "storage/SimpleLRU.h"
+#include "storage/StripedLRU.h"
 #include "storage/ThreadSafeSimpleLRU.h"
 
 using namespace Afina;
