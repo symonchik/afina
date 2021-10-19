@@ -7,14 +7,16 @@ namespace Backend {
 void SimpleLRU::delete_last()
 {
     lru_node *del_node = _lru_tail;
+    // counting a new size
     std::size_t delta_sz = del_node->key.size() + del_node->value.size(); 
     _lru_index.erase(del_node->key);  
     if (_lru_head.get() == _lru_tail) 
     {
+        // no more nodes
         _lru_head.reset(nullptr);
     } else {
-        _lru_tail = _lru_tail->prev;
-        _lru_tail->next.reset(nullptr);
+        _lru_tail = _lru_tail->prev; // new tail
+        _lru_tail->next.reset(nullptr); // transfer pointer
     }
     _cur_size -= delta_sz;
 }
@@ -22,12 +24,17 @@ void SimpleLRU::delete_last()
 void SimpleLRU::insert_node(lru_node *node)
 {
     if (_lru_head.get()) {
+        // something in head
+        // with save head
         _lru_head.get()->prev = node;
     } else 
     {
         _lru_tail = node;
     }
     node->next = std::move(_lru_head);
+    // Destroys the object currently managed by the unique_ptr (if any) and takes ownership of p.
+    // If p is a null pointer (such as a default-initialized pointer), the unique_ptr becomes empty, managing no object after the call.
+    // To release the ownership of the stored pointer without destroying it, use member function release instead.
     _lru_head.reset(node);            
 }
 
@@ -56,11 +63,14 @@ void SimpleLRU::node_to_head(lru_node *node)
 
 void SimpleLRU::PutImpl(const std::string &key, const std::string &value, const std::size_t entry_size)
 {
+    // free memory for
     while (_cur_size + entry_size > _max_size) {
         delete_last();
     }
     lru_node *new_node = new lru_node{key, value, nullptr, nullptr};
     insert_node(new_node);
+    // refresh map
+    // Inserts element(s) into the container, if the container doesn't already contain an element with an equivalent key.
     _lru_index.insert({std::reference_wrapper<const std::string>(new_node->key),
                        std::reference_wrapper<lru_node>(*new_node)}); 
     _cur_size += entry_size;                                         
@@ -69,6 +79,7 @@ void SimpleLRU::PutImpl(const std::string &key, const std::string &value, const 
 
 void SimpleLRU::SetImpl(lru_node &node, const std::string &value)
 {
+    // new value for node
     int delta_sz = value.size() - node.value.size();
     node_to_head(&node);                           
     while (_cur_size + delta_sz > _max_size)        
@@ -94,8 +105,6 @@ bool SimpleLRU::Put(const std::string &key, const std::string &value)
     if (node != _lru_index.end())     
     {
         SetImpl((node->second).get(), value);
-
-
     } else 
     {
         PutImpl(key, value, entry_size);
@@ -118,7 +127,6 @@ bool SimpleLRU::PutIfAbsent(const std::string &key, const std::string &value)
         return false;
     }
 }
-
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Set(const std::string &key, const std::string &value)
 {
@@ -134,7 +142,6 @@ bool SimpleLRU::Set(const std::string &key, const std::string &value)
         return false;
     }
 }
-
 // See MapBasedGlobalLockImpl.h
 bool SimpleLRU::Delete(const std::string &key)
 {
